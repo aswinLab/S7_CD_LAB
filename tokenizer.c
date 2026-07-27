@@ -1,0 +1,165 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+int is_keyword(char *str) {
+    char *keywords[] = {
+        "int", "float", "char", "double", "return", 
+        "if", "else", "while", "for", "void", "switch", "case"
+    };
+    int num_keywords = sizeof(keywords) / sizeof(keywords[0]);
+    
+    for (int i = 0; i < num_keywords; i++) {
+        if (strcmp(str, keywords[i]) == 0) {
+            return 1; 
+        }
+    }
+    return 0; 
+}
+
+void count_lexemes(char **tokens, int *var_count, int *kw_count, int *op_count) {
+    for (int i = 0; tokens[i] != NULL; i++) {
+        char *t = tokens[i];
+
+        if (strcmp(t, "+") == 0 || strcmp(t, "-") == 0 || strcmp(t, "*") == 0 || 
+            strcmp(t, "/") == 0 || strcmp(t, "=") == 0 || strcmp(t, "+=") == 0 || 
+            strcmp(t, "-=") == 0 || strcmp(t, "*=") == 0 || strcmp(t, "/=") == 0 || 
+            strcmp(t, "==") == 0) {
+            (*op_count)++;
+        }
+        else if (isalpha(t[0]) || t[0] == '_') {
+            if (is_keyword(t)) {
+                (*kw_count)++;
+            } else {
+                (*var_count)++;
+            }
+        }
+    }
+}
+
+char **make_tokens(char *line) {
+    int i = 0;
+    int j = 0;
+    char **tokens = malloc(100 * sizeof(char *)); 
+    if (tokens == NULL) return NULL;
+
+    char curr;
+    while(line[i] != '\0'){
+        curr = line[i];
+        
+        if(curr == '+' || curr == '=' || curr == '/' || curr == '-' || curr == '*' || 
+           curr == '(' || curr == ')' || curr == '{' || curr == '}'){
+
+            if(line[i+1] == '='){
+                tokens[j] = malloc(3 * sizeof(char)); 
+                tokens[j][0] = curr;
+                tokens[j][1] = '=';
+                tokens[j][2] = '\0';
+                j += 1;
+                i += 2;
+            }
+            else{
+                tokens[j] = malloc(2 * sizeof(char)); 
+                tokens[j][0] = curr;
+                tokens[j][1] = '\0';
+                j += 1;
+                i += 1;
+            }
+        }
+        else if(curr == ' ' || curr == '\n' || curr == '\t' || curr == '\r'){ 
+            i+=1;
+            continue;
+        }
+        else if(isalpha(curr) || curr == '_') {
+            int start = i;
+            while (line[i] != '\0' && (isalnum(line[i]) || line[i] == '_')) {
+                i++;
+            }
+            int len = i - start;
+            tokens[j] = malloc((len + 1) * sizeof(char));
+            strncpy(tokens[j], &line[start], len);
+            tokens[j][len] = '\0';
+            j++;
+        }
+        else if (curr == '"' || curr == '\'') {
+            int start = i;
+            char quote_type = curr; 
+            i++; 
+            while (line[i] != '\0' && line[i] != quote_type) {
+                if (line[i] == '\\' && line[i+1] != '\0') {
+                    i++;
+                }
+                i++;
+            }
+            
+            if (line[i] == quote_type) {
+                i++; 
+            }
+            
+            int len = i - start;
+            tokens[j] = malloc((len + 1) * sizeof(char));
+            strncpy(tokens[j], &line[start], len);
+            tokens[j][len] = '\0';
+            j++;
+        }
+        else {
+            tokens[j] = malloc(2 * sizeof(char));
+            tokens[j][0] = curr;
+            tokens[j][1] = '\0';
+            j += 1;
+            i += 1;
+        }
+    }
+    tokens[j] = NULL;
+
+    return tokens;
+}
+
+int main(int argc, char* argv[]){
+	if (argc < 2) {
+		printf("Usage: %s <filename>\n", argv[0]);
+		return 1;
+	}
+
+	char* path = argv[1];
+	FILE* fd = fopen(path, "r");
+	if (fd == NULL) {
+		perror("Error opening file");
+		return 1;
+	}
+
+	char** tokens;
+	char line[1024];
+
+	int variable_total = 0;
+	int keyword_total = 0;
+	int operator_total = 0;
+
+	while(fgets(line, 1024, fd) != NULL){
+	
+		if (line[0] == '#') {
+		    continue;
+		}
+		
+		tokens = make_tokens(line);
+		if (tokens == NULL) continue;
+
+		count_lexemes(tokens, &variable_total, &keyword_total, &operator_total);
+
+		for (int i = 0; tokens[i] != NULL; i++) {
+        		printf("Token [%d]: %s\n", i, tokens[i]);
+			free(tokens[i]); 
+    		}
+		free(tokens); 
+	}
+	fclose(fd);
+
+	printf("\n--- Metrics Summary ---\n");
+	printf("Total Keywords:  %d\n", keyword_total);
+	printf("Total Variables: %d\n", variable_total);
+	printf("Total Operators: %d\n", operator_total);
+
+	return 0; 
+}
+
