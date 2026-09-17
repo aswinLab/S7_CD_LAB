@@ -85,6 +85,7 @@ void follow(char result[], char c) {
     int i, j;
     char subResult[20];
     
+    
     if (prod[0][0] == c) {
         addToSet(result, '$');
     }
@@ -93,24 +94,39 @@ void follow(char result[], char c) {
     for (i = 0; i < count; i++) {
         for (j = 2; prod[i][j] != '\0'; j++) {
             
-            
+        
             if (prod[i][j] == c) {
+                int next = j + 1;
+                int can_be_empty = 0;
                 
-                if (prod[i][j + 1] != '\0') {
-                    
+        
+                while (prod[i][next] != '\0') {
                     memset(subResult, '\0', sizeof(subResult));
-                    first(subResult, prod[i][j + 1]);
+                    first(subResult, prod[i][next]);
+                    
+                    can_be_empty = 0; 
                     
                     int k;
                     for (k = 0; subResult[k] != '\0'; k++) {
                         if (subResult[k] != '#') { 
-                            addToSet(result, subResult[k]);
+                            addToSet(result, subResult[k]); 
+                        } else {
+                            can_be_empty = 1; 
                         }
                     }
+                    
+                    
+                    if (can_be_empty == 0) {
+                        break;
+                    }
+                    
+                    
+                    next++;
                 }
                 
                 
-                if (prod[i][j + 1] == '\0' && c != prod[i][0]) {
+                
+                if (prod[i][next] == '\0' && c != prod[i][0]) {
                     memset(subResult, '\0', sizeof(subResult));
                     follow(subResult, prod[i][0]);
                     
